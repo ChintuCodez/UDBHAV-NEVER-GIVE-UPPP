@@ -61,6 +61,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isManualAnalyzing, setIsManualAnalyzing] = useState(false)
 
   useEffect(() => {
     if (session) {
@@ -97,6 +98,35 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
       router.push('/dashboard')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const triggerManualAnalysis = async () => {
+    if (!submission) return
+    
+    setIsManualAnalyzing(true)
+    try {
+      console.log('Manually triggering AI analysis for submission:', submission.id)
+      const response = await fetch(`/api/analyze/${submission.id}`, {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Manual analysis response:', result)
+        toast.success('AI analysis completed!')
+        // Refresh the submission data
+        await fetchSubmission()
+      } else {
+        const errorResult = await response.json()
+        console.error('Manual analysis failed:', errorResult)
+        toast.error(`AI analysis failed: ${errorResult.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Manual analysis error:', error)
+      toast.error('Failed to trigger AI analysis')
+    } finally {
+      setIsManualAnalyzing(false)
     }
   }
 
@@ -261,7 +291,7 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
               </div>
 
               {/* AI Analysis Results */}
-              {isAnalyzing ? (
+              {isAnalyzing || isManualAnalyzing ? (
                 <div className="card">
                   <div className="flex items-center mb-4">
                     <SparklesIcon className="h-6 w-6 text-purple-600 mr-2 animate-spin" />
@@ -396,6 +426,33 @@ export default function SubmissionDetailPage({ params }: { params: { id: string 
                       </ul>
                     </div>
                   )}
+                </div>
+              ) : submission.status === 'PENDING' ? (
+                <div className="card">
+                  <div className="text-center py-8">
+                    <SparklesIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Analysis Not Started</h2>
+                    <p className="text-gray-600 mb-6">
+                      The AI analysis hasn't been completed yet. Click the button below to start the analysis.
+                    </p>
+                    <button
+                      onClick={triggerManualAnalysis}
+                      disabled={isManualAnalyzing}
+                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isManualAnalyzing ? (
+                        <>
+                          <SparklesIcon className="h-4 w-4 mr-2 animate-spin" />
+                          Starting Analysis...
+                        </>
+                      ) : (
+                        <>
+                          <SparklesIcon className="h-4 w-4 mr-2" />
+                          Start AI Analysis
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               ) : null}
 

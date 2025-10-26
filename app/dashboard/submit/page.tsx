@@ -136,23 +136,26 @@ export default function SubmitPage() {
         // Start AI analysis and wait for completion
         setIsAnalyzing(true)
         try {
+          console.log('Starting AI analysis for submission:', result.submission.id)
           const analysisResponse = await fetch(`/api/analyze/${result.submission.id}`, {
             method: 'POST'
           })
           
           if (analysisResponse.ok) {
-            // Wait a moment for analysis to complete
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            const analysisResult = await analysisResponse.json()
+            console.log('Analysis response:', analysisResult)
             toast.success('AI analysis completed!')
             router.push(`/dashboard/submissions/${result.submission.id}`)
           } else {
-            toast.error('AI analysis failed, but submission was saved')
-            router.push('/dashboard')
+            const errorResult = await analysisResponse.json()
+            console.error('Analysis failed:', errorResult)
+            toast.error(`AI analysis failed: ${errorResult.error || 'Unknown error'}`)
+            router.push(`/dashboard/submissions/${result.submission.id}`)
           }
         } catch (analysisError) {
           console.error('Analysis error:', analysisError)
           toast.error('AI analysis failed, but submission was saved')
-          router.push('/dashboard')
+          router.push(`/dashboard/submissions/${result.submission.id}`)
         }
       } else {
         const error = await response.json()
